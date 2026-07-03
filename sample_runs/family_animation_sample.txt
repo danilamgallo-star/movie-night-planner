@@ -1,0 +1,14 @@
+Command:
+python movie_night_planner.py "Family movie night: 4 people, the youngest is 8, we have 2 hours, everyone loves adventure and animation."
+
+Sample expected output shape:
+
+## Recommended Shortlist
+1. The Incredibles (2004) — 115 min, PG — fits the 2-hour limit, works for an 8-year-old, and matches adventure/animation.
+2. Toy Story (1995) — 81 min, G — comfortably under the time budget and age-appropriate with a strong family/adventure feel.
+3. Finding Nemo (2003) — 100 min, G — age-appropriate, under 120 minutes, and fits the animated adventure mood.
+
+## Why These Fit
+All three picks stay within the 2-hour time budget, avoid ratings above PG for the youngest viewer, and match the group's animation/adventure preference.
+
+Note: actual titles may differ depending on live TMDB results and ranking at runtime.

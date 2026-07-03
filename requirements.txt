@@ -1,0 +1,5 @@
+google-adk
+mcp
+python-dotenv
+litellm
+httpx
