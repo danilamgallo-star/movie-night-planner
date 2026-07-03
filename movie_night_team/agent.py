@@ -6,7 +6,7 @@ import os
 import sys
 
 from dotenv import load_dotenv
-from google.adk.agents import LlmAgent
+from google.adk.agents import LlmAgent, SequentialAgent
 from google.adk.tools.mcp_tool import McpToolset
 from google.adk.tools.mcp_tool.mcp_session_manager import StdioConnectionParams
 from mcp import StdioServerParameters
@@ -66,12 +66,9 @@ REASON: one line
 """
 
 HOST_PROMPT = """\
-You are Host, the orchestrator of a multi-agent Movie Night Planner.
-
-For every movie-night request, follow this pipeline IN ORDER:
-1. Delegate to Scout. Pass the complete user request. Scout must retrieve candidates and details from TMDB.
-2. Delegate to Referee. Pass the user constraints and Scout's complete candidate list.
-3. Recommend a ranked shortlist using only movies marked FITS.
+You are Host, the final recommender for a multi-agent Movie Night Planner.
+Use the conversation history from Scout and Referee.
+Recommend a ranked shortlist using only movies marked FITS by Referee.
 
 Final answer format:
 ## Recommended Shortlist
@@ -83,7 +80,7 @@ Final answer format:
 One short paragraph connecting the picks to the group's age, time, and mood.
 
 If nothing fits, do not invent recommendations. Say what constraint to relax, e.g. allow 15 more minutes, allow PG-13, or broaden the genre.
-Never answer from your own movie knowledge without delegating to Scout first.
+Never use movies that Referee marked DOESN'T FIT.
 """
 
 scout = LlmAgent(
@@ -112,10 +109,15 @@ host_model = (
     else "gemini-2.5-flash"
 )
 
-root_agent = LlmAgent(
+host = LlmAgent(
     name="host",
     model=host_model,
-    description="Orchestrates Scout and Referee to recommend a ranked movie-night shortlist.",
+    description="Writes the final ranked movie shortlist from Scout and Referee results.",
     instruction=HOST_PROMPT,
-    sub_agents=[scout, referee],
+)
+
+root_agent = SequentialAgent(
+    name="movie_night_team",
+    description="Runs Scout, Referee, then Host in a fixed movie-planning pipeline.",
+    sub_agents=[scout, referee, host],
 )

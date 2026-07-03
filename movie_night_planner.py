@@ -18,7 +18,7 @@ from dotenv import load_dotenv
 
 load_dotenv()
 
-from google.adk.agents import LlmAgent
+from google.adk.agents import LlmAgent, SequentialAgent
 from google.adk.runners import Runner
 from google.adk.sessions import InMemorySessionService
 from google.adk.tools.mcp_tool import McpToolset
@@ -67,11 +67,9 @@ REASON: one line
 """
 
 HOST_PROMPT = """\
-You are Host, the orchestrator of a Movie Night Planner.
-Always follow this order:
-1. Delegate to Scout with the complete user request.
-2. Delegate to Referee with user constraints and Scout's candidate list.
-3. Recommend a ranked shortlist using only movies marked FITS.
+You are Host, the final recommender for a Movie Night Planner.
+Use the conversation history from Scout and Referee.
+Recommend a ranked shortlist using only movies marked FITS by Referee.
 
 Final answer format:
 ## Recommended Shortlist
@@ -82,11 +80,11 @@ Final answer format:
 ## Why These Fit
 One short paragraph.
 
-If nothing fits, say which constraint to relax. Never answer without delegating to Scout first.
+If nothing fits, say which constraint to relax. Never use movies that Referee marked DOESN'T FIT.
 """
 
 
-def make_team() -> tuple[LlmAgent, list[McpToolset]]:
+def make_team() -> tuple[SequentialAgent, list[McpToolset]]:
     scout_tools = _mcp()
 
     scout = LlmAgent(
@@ -107,12 +105,17 @@ def make_team() -> tuple[LlmAgent, list[McpToolset]]:
     host = LlmAgent(
         name="host",
         model=_host_model(),
-        description="Orchestrates Scout and Referee to recommend a ranked movie shortlist.",
+        description="Writes the final ranked movie shortlist from Scout and Referee results.",
         instruction=HOST_PROMPT,
-        sub_agents=[scout, referee],
     )
 
-    return host, [scout_tools]
+    team = SequentialAgent(
+        name="movie_night_team",
+        description="Runs Scout, Referee, then Host in a fixed movie-planning pipeline.",
+        sub_agents=[scout, referee, host],
+    )
+
+    return team, [scout_tools]
 
 
 async def run_once(request: str, verbose: bool = False) -> str:
